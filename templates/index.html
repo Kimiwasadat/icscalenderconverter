@@ -1,0 +1,47 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Academic Calendar Extractor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      text-align: center;
+      padding-top: 50px;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    form {
+      background: #fff;
+      display: inline-block;
+      padding: 30px;
+      border-radius: 10px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    input[type=file], input[type=submit] {
+      margin: 20px 0;
+      font-size: 16px;
+    }
+    input[type=submit] {
+      background-color: #4CAF50;
+      color: white;
+      padding: 10px 20px;
+      border: none;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    input[type=submit]:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 Academic Calendar Extractor</h1>
+  <p>Upload your Academic Calendar PDF to see events and get an ICS file.</p>
+  <form action="/upload" method="post" enctype="multipart/form-data">
+    <input type="file" name="pdf_file" accept=".pdf" required><br>
+    <input type="submit" value="Extract Events">
+  </form>
+</body>
+</html>

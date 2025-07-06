@@ -1,0 +1,4 @@
+Flask
+pdfplumber
+ics
+gunicorn

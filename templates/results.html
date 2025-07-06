@@ -1,0 +1,59 @@
+<!DOCTYPE html>
+<html>
+<head>
+  <title>Results - Academic Calendar Extractor</title>
+  <style>
+    body {
+      font-family: Arial, sans-serif;
+      background-color: #f4f4f9;
+      text-align: center;
+      padding: 30px;
+    }
+    h1 {
+      color: #4CAF50;
+    }
+    table {
+      margin: 20px auto;
+      border-collapse: collapse;
+      background: #fff;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    th, td {
+      border: 1px solid #ddd;
+      padding: 12px 20px;
+    }
+    th {
+      background-color: #4CAF50;
+      color: white;
+    }
+    a.button {
+      display: inline-block;
+      margin-top: 20px;
+      padding: 12px 24px;
+      background-color: #4CAF50;
+      color: white;
+      text-decoration: none;
+      border-radius: 5px;
+    }
+    a.button:hover {
+      background-color: #45a049;
+    }
+  </style>
+</head>
+<body>
+  <h1>📅 Extracted Events</h1>
+  <table>
+    <tr>
+      <th>Date(s)</th>
+      <th>Description</th>
+    </tr>
+    {% for date, desc in events %}
+    <tr>
+      <td>{{ date }}</td>
+      <td>{{ desc }}</td>
+    </tr>
+    {% endfor %}
+  </table>
+  <a class="button" href="/download/{{ ics_id }}">⬇️ Download ICS Calendar File</a>
+</body>
+</html>
