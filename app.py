@@ -1,13 +1,13 @@
 import os
 import re
 from datetime import datetime
-from flask import Flask, request, render_template, send_file, redirect, url_for, session
+from flask import Flask, request, render_template, send_file, session
 from ics import Calendar, Event
 import pdfplumber
 from io import BytesIO
 
 app = Flask(__name__)
-app.secret_key = 'supersecretkey'  # Needed for session storage
+app.secret_key = 'supersecretkey'
 
 DEFAULT_YEAR = 2025
 
@@ -28,7 +28,6 @@ KEYWORDS = [
 
 date_pattern = r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b(?:\s*[-–]\s*\d{1,2}/\d{1,2}(?:/\d{2,4})?)?'
 
-# In-memory storage for generated ICS
 ics_storage = {}
 
 def parse_date_string(date_str):
@@ -43,6 +42,24 @@ def parse_date_string(date_str):
     else:
         raise ValueError(f"Invalid date format: {date_str}")
     return datetime(year, month, day)
+
+def clean_description(raw_desc, line_lower):
+    # 1. Normalize College Closed / No Classes
+    if "college closed" in line_lower:
+        return "College Closed"
+    if "no classes" in line_lower:
+        return "No classes scheduled"
+
+    # 2. Remove weekdays anywhere in description
+    weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    words = raw_desc.split()
+    words = [word for word in words if word.lower() not in weekdays]
+    description = ' '.join(words)
+
+    # 3. Remove trailing punctuation / dashes / colons
+    description = description.rstrip(' ;:-–').strip()
+
+    return description
 
 def extract_events(file_stream):
     calendar = Calendar()
@@ -65,14 +82,10 @@ def extract_events(file_stream):
                     continue
 
                 for match in matches:
-                    description = line.replace(match, "").strip()
-                    description_parts = description.split()
-                    if description_parts and description_parts[0].lower() in [
-                        'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'
-                    ]:
-                        description_parts = description_parts[1:]
-                    description = ' '.join(description_parts).strip(' -–\t')
+                    raw_desc = line.replace(match, "").strip()
+                    description = clean_description(raw_desc, line_lower)
 
+                    # Handle date ranges
                     if '-' in match or '–' in match:
                         date_parts = re.split(r'[-–]', match)
                         if len(date_parts) == 2:
@@ -84,21 +97,26 @@ def extract_events(file_stream):
                             except Exception:
                                 continue
 
-                            events_list.append((match, description))
+                            current_date = start_date
+                            while current_date <= end_date:
+                                date_string = current_date.strftime("%m/%d")
+                                events_list.append((date_string, description))
 
-                            event = Event()
-                            event.name = description or "Academic Event"
-                            event.begin = start_date
-                            event.end = end_date
-                            event.make_all_day()
-                            calendar.events.add(event)
+                                event = Event()
+                                event.name = description or "Academic Event"
+                                event.begin = current_date
+                                event.make_all_day()
+                                calendar.events.add(event)
+
+                                current_date += timedelta(days=1)
                     else:
                         try:
                             event_date = parse_date_string(match)
                         except Exception:
                             continue
 
-                        events_list.append((match, description))
+                        date_string = event_date.strftime("%m/%d")
+                        events_list.append((date_string, description))
 
                         event = Event()
                         event.name = description or "Academic Event"
@@ -123,7 +141,7 @@ def upload():
 
     events, ics_content = extract_events(file)
 
-    # Store ICS content in session-like memory for download
+    # Store ICS in memory for download
     session_id = os.urandom(8).hex()
     ics_storage[session_id] = ics_content
 
@@ -146,5 +164,4 @@ def download_ics(ics_id):
     )
 
 if __name__ == "__main__":
-    app.run()
-
+    app.run(debug=True)
