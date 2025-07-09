@@ -3,41 +3,42 @@
 <head>
   <title>📅 Review and Edit Events</title>
   <style>
-    body { font-family: Arial, sans-serif; padding: 20px; }
-    table { border-collapse: collapse; width: 100%; }
+    body { font-family: Arial, sans-serif; padding: 20px; background-color: #f9f9f9; }
+    h2 { color: #333; }
+    table { border-collapse: collapse; width: 100%; background: white; }
     th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
-    th { background-color: #f4f4f4; }
-    input[type="text"] { width: 100%; border: none; background: transparent; }
-    .add-row-button {
-      background: #f9f9f9;
-      text-align: center;
-      cursor: pointer;
-      color: #4CAF50;
-      font-size: 24px;
-      padding: 4px;
-      border: 1px dashed #ccc;
-    }
-    .add-row-button:hover {
-      background-color: #e8f5e9;
-    }
+    th { background-color: #f0f0f0; }
+    input[type="text"] { width: 100%; border: none; background: transparent; padding: 4px; }
     .controls { margin-top: 20px; }
     button {
       padding: 10px 20px;
       font-size: 16px;
       margin-right: 10px;
       cursor: pointer;
+      border: none;
+      border-radius: 4px;
+    }
+    .add-btn {
+      background-color: #4CAF50;
+      color: white;
+    }
+    .generate-btn {
+      background-color: #1976D2;
+      color: white;
     }
   </style>
 </head>
 <body>
   <h2>✅ Review and Edit Your Academic Events</h2>
-  <p>You can edit any row or insert new dates as needed. When done, click <strong>Generate ICS</strong>.</p>
+  <p>You can edit any row or add new dates. When done, click <strong>Generate ICS</strong>.</p>
 
   <form id="eventsForm" method="POST" action="/generate">
+    <button type="button" class="add-btn" onclick="addRow()">➕ Add Event</button>
+
     <table id="eventsTable">
       <thead>
         <tr>
-          <th>Date (MM/DD or MM/DD-MM/DD)</th>
+          <th>Date (MM/DD/YYYY or MM/DD/YYYY-MM/DD/YYYY)</th>
           <th>Description</th>
         </tr>
       </thead>
@@ -47,30 +48,24 @@
             <td><input type="text" name="dates" value="{{ date }}"></td>
             <td><input type="text" name="descriptions" value="{{ desc }}"></td>
           </tr>
-          <tr class="add-row-button" onclick="addRow(this)">
-            <td colspan="2">➕ Add Event Here</td>
-          </tr>
         {% endfor %}
-        <tr class="add-row-button" onclick="addRow(this)">
-          <td colspan="2">➕ Add Event Here</td>
-        </tr>
       </tbody>
     </table>
 
     <div class="controls">
-      <button type="submit">✨ Generate ICS</button>
+      <button type="submit" class="generate-btn">✨ Generate ICS</button>
     </div>
   </form>
 
   <script>
-    function addRow(buttonRow) {
+    function addRow() {
       const tbody = document.getElementById('eventsBody');
       const newRow = document.createElement('tr');
       newRow.innerHTML = `
-        <td><input type="text" name="dates" placeholder="MM/DD or MM/DD-MM/DD"></td>
+        <td><input type="text" name="dates" placeholder="MM/DD/YYYY or MM/DD/YYYY-MM/DD/YYYY"></td>
         <td><input type="text" name="descriptions" placeholder="Description"></td>
       `;
-      tbody.insertBefore(newRow, buttonRow);
+      tbody.appendChild(newRow);
     }
   </script>
 </body>
