@@ -1,7 +1,7 @@
 import os
 import re
 from datetime import datetime, timedelta
-from flask import Flask, request, render_template, send_file
+from flask import Flask, request, render_template, send_file, session
 from ics import Calendar, Event
 import pdfplumber
 from io import BytesIO
@@ -84,6 +84,8 @@ def extract_events(file_stream):
 
     with pdfplumber.open(file_stream) as pdf:
         header_year = extract_academic_year_from_header(pdf)
+        session['header_year'] = header_year
+
         if header_year:
             print(f"✅ Detected Academic Year: {header_year}")
         else:
@@ -169,6 +171,7 @@ def upload():
 
 @app.route('/generate', methods=['POST'])
 def generate():
+    header_year = session.get('header_year')
     dates = request.form.getlist('dates')
     descriptions = request.form.getlist('descriptions')
     calendar = Calendar()
@@ -187,8 +190,8 @@ def generate():
             date_parts = re.split(r'[-–]', date)
             if len(date_parts) == 2:
                 try:
-                    start_date = parse_date_string(date_parts[0].strip())
-                    end_date = parse_date_string(date_parts[1].strip())
+                    start_date = parse_date_string(date_parts[0].strip(), header_year)
+                    end_date = parse_date_string(date_parts[1].strip(), header_year)
                     event = Event()
                     event.name = desc
                     event.begin = start_date
@@ -202,7 +205,7 @@ def generate():
                 errors.append(f"Row {i}: Invalid date range format.")
         else:
             try:
-                event_date = parse_date_string(date)
+                event_date = parse_date_string(date, header_year)
                 event = Event()
                 event.name = desc
                 event.begin = event_date
