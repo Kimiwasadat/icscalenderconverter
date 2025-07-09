@@ -49,11 +49,13 @@ def parse_date_string(date_str, header_year=None):
         if year < 100:
             year += 2000
         return datetime(year, month, day)
-    elif len(parts) == 2 and header_year:
+    elif len(parts) == 2:
+        if not header_year:
+            raise ValueError("Year missing and no header year available.")
         month, day = map(int, parts)
         return datetime(header_year, month, day)
     else:
-        raise ValueError(f"Date format invalid or missing year: {date_str}")
+        raise ValueError(f"Invalid date format: {date_str}")
 
 def strip_header_weekdays(desc):
     weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -75,8 +77,7 @@ def clean_description(raw_desc, line_lower):
     if "no classes scheduled" in line_lower:
         return "No classes scheduled"
     desc = strip_header_weekdays(raw_desc)
-    desc = desc.strip(' ;:-–').strip()
-    return desc
+    return desc.strip(' ;:-–').strip()
 
 def extract_events(file_stream):
     calendar = Calendar()
@@ -85,11 +86,6 @@ def extract_events(file_stream):
     with pdfplumber.open(file_stream) as pdf:
         header_year = extract_academic_year_from_header(pdf)
         session['header_year'] = header_year
-
-        if header_year:
-            print(f"✅ Detected Academic Year: {header_year}")
-        else:
-            print("⚠️ Could not detect academic year in header. MM/DD dates will be skipped.")
 
         for page in pdf.pages:
             text = page.extract_text()
@@ -113,11 +109,9 @@ def extract_events(file_stream):
                     if '-' in match or '–' in match:
                         date_parts = re.split(r'[-–]', match)
                         if len(date_parts) == 2:
-                            start_str = date_parts[0].strip()
-                            end_str = date_parts[1].strip()
                             try:
-                                start_date = parse_date_string(start_str, header_year)
-                                end_date = parse_date_string(end_str, header_year)
+                                start_date = parse_date_string(date_parts[0].strip(), header_year)
+                                end_date = parse_date_string(date_parts[1].strip(), header_year)
                             except Exception as e:
                                 print(f"⚠️ Skipping range '{match}': {e}")
                                 continue
@@ -163,7 +157,6 @@ def upload():
         return "No selected file", 400
 
     events, ics_content = extract_events(file)
-
     session_id = os.urandom(8).hex()
     ics_storage[session_id] = ics_content
 
@@ -192,13 +185,16 @@ def generate():
                 try:
                     start_date = parse_date_string(date_parts[0].strip(), header_year)
                     end_date = parse_date_string(date_parts[1].strip(), header_year)
+
                     event = Event()
                     event.name = desc
                     event.begin = start_date
-                    event.end = end_date + timedelta(days=1)
+                    event.end = end_date + timedelta(days=1)  # Exclusive end
                     event.make_all_day()
                     calendar.events.add(event)
-                    events_list.append((date, desc))
+
+                    date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
+                    events_list.append((date_string, desc))
                 except Exception as e:
                     errors.append(f"Row {i}: Invalid date range. {str(e)}")
             else:
@@ -211,7 +207,9 @@ def generate():
                 event.begin = event_date
                 event.make_all_day()
                 calendar.events.add(event)
-                events_list.append((date, desc))
+
+                date_string = event_date.strftime("%m/%d/%Y")
+                events_list.append((date_string, desc))
             except Exception as e:
                 errors.append(f"Row {i}: Invalid date. {str(e)}")
 
