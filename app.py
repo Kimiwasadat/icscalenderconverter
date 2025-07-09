@@ -44,20 +44,22 @@ def parse_date_string(date_str):
     return datetime(year, month, day)
 
 def clean_description(raw_desc, line_lower):
-    # 1. Normalize College Closed / No Classes
+    # 1️⃣ Normalize College Closed / No Classes
     if "college closed" in line_lower:
         return "College Closed"
     if "no classes" in line_lower:
         return "No classes scheduled"
 
-    # 2. Remove weekdays anywhere in description
+    # 2️⃣ Remove only leading weekday header (not internal mentions)
     weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     words = raw_desc.split()
-    words = [word for word in words if word.lower() not in weekdays]
+    if words and words[0].lower() in weekdays:
+        words = words[1:]
+
     description = ' '.join(words)
 
-    # 3. Remove trailing punctuation / dashes / colons
-    description = description.rstrip(' ;:-–').strip()
+    # 3️⃣ Remove leading/trailing punctuation/dashes/colons/semicolons
+    description = description.strip(' ;:-–').strip()
 
     return description
 
@@ -85,7 +87,7 @@ def extract_events(file_stream):
                     raw_desc = line.replace(match, "").strip()
                     description = clean_description(raw_desc, line_lower)
 
-                    # Handle date ranges
+                    # Handle date ranges as ONE event
                     if '-' in match or '–' in match:
                         date_parts = re.split(r'[-–]', match)
                         if len(date_parts) == 2:
@@ -97,18 +99,17 @@ def extract_events(file_stream):
                             except Exception:
                                 continue
 
-                            current_date = start_date
-                            while current_date <= end_date:
-                                date_string = current_date.strftime("%m/%d")
-                                events_list.append((date_string, description))
+                            # Keep range together for table
+                            date_string = f"{start_date.strftime('%m/%d')}-{end_date.strftime('%m/%d')}"
+                            events_list.append((date_string, description))
 
-                                event = Event()
-                                event.name = description or "Academic Event"
-                                event.begin = current_date
-                                event.make_all_day()
-                                calendar.events.add(event)
-
-                                current_date += timedelta(days=1)
+                            # Add ONE multi-day event in ICS
+                            event = Event()
+                            event.name = description or "Academic Event"
+                            event.begin = start_date
+                            event.end = end_date + timedelta(days=1)  # ICS end is exclusive
+                            event.make_all_day()
+                            calendar.events.add(event)
                     else:
                         try:
                             event_date = parse_date_string(match)
