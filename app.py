@@ -43,25 +43,30 @@ def parse_date_string(date_str):
         raise ValueError(f"Invalid date format: {date_str}")
     return datetime(year, month, day)
 
+def strip_header_weekdays(desc):
+    # Remove things like "Wednesday" or "Wednesday - Thursday" at start
+    weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
+    parts = desc.split()
+    while parts and parts[0].lower() in weekdays:
+        parts.pop(0)
+        if parts and parts[0] in ['-', '–']:
+            parts.pop(0)
+    return ' '.join(parts)
+
 def clean_description(raw_desc, line_lower):
-    # 1️⃣ Normalize College Closed / No Classes
+    # Special normalization
     if "college closed" in line_lower:
         return "College Closed"
-    if "no classes" in line_lower:
+    if "no classes scheduled" in line_lower:
         return "No classes scheduled"
 
-    # 2️⃣ Remove only leading weekday header (not internal mentions)
-    weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    words = raw_desc.split()
-    if words and words[0].lower() in weekdays:
-        words = words[1:]
+    # Remove leading weekday header
+    desc = strip_header_weekdays(raw_desc)
 
-    description = ' '.join(words)
+    # Clean punctuation
+    desc = desc.strip(' ;:-–').strip()
 
-    # 3️⃣ Remove leading/trailing punctuation/dashes/colons/semicolons
-    description = description.strip(' ;:-–').strip()
-
-    return description
+    return desc
 
 def extract_events(file_stream):
     calendar = Calendar()
@@ -99,15 +104,15 @@ def extract_events(file_stream):
                             except Exception:
                                 continue
 
-                            # Keep range together for table
+                            # Format date range for table
                             date_string = f"{start_date.strftime('%m/%d')}-{end_date.strftime('%m/%d')}"
                             events_list.append((date_string, description))
 
-                            # Add ONE multi-day event in ICS
+                            # ICS single multi-day event
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = start_date
-                            event.end = end_date + timedelta(days=1)  # ICS end is exclusive
+                            event.end = end_date + timedelta(days=1)
                             event.make_all_day()
                             calendar.events.add(event)
                     else:
