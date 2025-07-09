@@ -1,7 +1,7 @@
 import os
 import re
 from datetime import datetime, timedelta
-from flask import Flask, request, render_template, send_file, session
+from flask import Flask, request, render_template, send_file
 from ics import Calendar, Event
 import pdfplumber
 from io import BytesIO
@@ -24,16 +24,11 @@ KEYWORDS = [
     "spring recess",
 ]
 
-# Matches MM/DD or MM/DD/YYYY, and ranges
 date_pattern = r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b(?:\s*[-–]\s*\d{1,2}/\d{1,2}(?:/\d{2,4})?)?'
 
 ics_storage = {}
 
 def extract_academic_year_from_header(pdf):
-    """
-    Looks for lines like 'Fall 2025 Academic Calendar' or 'Spring 2026 Academic Calendar'
-    Returns the extracted year as int if found, else None
-    """
     try:
         first_page = pdf.pages[0]
         text = first_page.extract_text()
@@ -50,17 +45,14 @@ def extract_academic_year_from_header(pdf):
 def parse_date_string(date_str, header_year=None):
     parts = date_str.strip().split('/')
     if len(parts) == 3:
-        # Date already includes year
         month, day, year = map(int, parts)
         if year < 100:
             year += 2000
         return datetime(year, month, day)
     elif len(parts) == 2 and header_year:
-        # Append extracted header year
         month, day = map(int, parts)
         return datetime(header_year, month, day)
     else:
-        # Can't parse without year
         raise ValueError(f"Date format invalid or missing year: {date_str}")
 
 def strip_header_weekdays(desc):
@@ -91,7 +83,6 @@ def extract_events(file_stream):
     events_list = []
 
     with pdfplumber.open(file_stream) as pdf:
-        # Extract header year
         header_year = extract_academic_year_from_header(pdf)
         if header_year:
             print(f"✅ Detected Academic Year: {header_year}")
@@ -174,16 +165,19 @@ def upload():
     session_id = os.urandom(8).hex()
     ics_storage[session_id] = ics_content
 
-    return render_template('results.html', events=events, ics_id=session_id)
+    return render_template('results.html', events=events, ics_id=session_id, errors=[])
 
 @app.route('/generate', methods=['POST'])
 def generate():
     dates = request.form.getlist('dates')
     descriptions = request.form.getlist('descriptions')
     calendar = Calendar()
+    errors = []
 
-    for date, desc in zip(dates, descriptions):
+    events_list = []
+    for i, (date, desc) in enumerate(zip(dates, descriptions), start=1):
         if not date.strip() or not desc.strip():
+            errors.append(f"Row {i}: Missing date or description.")
             continue
 
         date = date.strip()
@@ -195,32 +189,33 @@ def generate():
                 try:
                     start_date = parse_date_string(date_parts[0].strip())
                     end_date = parse_date_string(date_parts[1].strip())
-                except Exception:
-                    continue
-
-                event = Event()
-                event.name = desc
-                event.begin = start_date
-                event.end = end_date + timedelta(days=1)
-                event.make_all_day()
-                calendar.events.add(event)
+                    event = Event()
+                    event.name = desc
+                    event.begin = start_date
+                    event.end = end_date + timedelta(days=1)
+                    event.make_all_day()
+                    calendar.events.add(event)
+                    events_list.append((date, desc))
+                except Exception as e:
+                    errors.append(f"Row {i}: Invalid date range. {str(e)}")
+            else:
+                errors.append(f"Row {i}: Invalid date range format.")
         else:
             try:
                 event_date = parse_date_string(date)
-            except Exception:
-                continue
-
-            event = Event()
-            event.name = desc
-            event.begin = event_date
-            event.make_all_day()
-            calendar.events.add(event)
+                event = Event()
+                event.name = desc
+                event.begin = event_date
+                event.make_all_day()
+                calendar.events.add(event)
+                events_list.append((date, desc))
+            except Exception as e:
+                errors.append(f"Row {i}: Invalid date. {str(e)}")
 
     session_id = os.urandom(8).hex()
     ics_storage[session_id] = str(calendar)
 
-    events_list = list(zip(dates, descriptions))
-    return render_template('results.html', events=events_list, ics_id=session_id)
+    return render_template('results.html', events=events_list, ics_id=session_id, errors=errors)
 
 @app.route('/download/<ics_id>')
 def download_ics(ics_id):
