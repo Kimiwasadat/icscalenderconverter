@@ -11,8 +11,8 @@
     input[type="text"] { width: 100%; border: none; background: transparent; padding: 4px; }
     .controls { margin-top: 20px; }
     button {
-      padding: 10px 20px;
-      font-size: 16px;
+      padding: 8px 16px;
+      font-size: 14px;
       margin-right: 10px;
       cursor: pointer;
       border: none;
@@ -26,11 +26,16 @@
       background-color: #1976D2;
       color: white;
     }
+    .delete-btn {
+      background-color: #E53935;
+      color: white;
+      font-size: 12px;
+    }
   </style>
 </head>
 <body>
   <h2>✅ Review and Edit Your Academic Events</h2>
-  <p>You can edit any row or add new dates. When done, click <strong>Generate ICS</strong>.</p>
+  <p>You can edit any row, add new events, or remove events. When done, click <strong>Generate ICS</strong>.</p>
 
   <form id="eventsForm" method="POST" action="/generate">
     <button type="button" class="add-btn" onclick="addRow()">➕ Add Event</button>
@@ -40,6 +45,7 @@
         <tr>
           <th>Date (MM/DD/YYYY or MM/DD/YYYY-MM/DD/YYYY)</th>
           <th>Description</th>
+          <th>Action</th>
         </tr>
       </thead>
       <tbody id="eventsBody">
@@ -47,6 +53,7 @@
           <tr>
             <td><input type="text" name="dates" value="{{ date }}"></td>
             <td><input type="text" name="descriptions" value="{{ desc }}"></td>
+            <td><button type="button" class="delete-btn" onclick="deleteRow(this)">❌ Delete</button></td>
           </tr>
         {% endfor %}
       </tbody>
@@ -64,8 +71,14 @@
       newRow.innerHTML = `
         <td><input type="text" name="dates" placeholder="MM/DD/YYYY or MM/DD/YYYY-MM/DD/YYYY"></td>
         <td><input type="text" name="descriptions" placeholder="Description"></td>
+        <td><button type="button" class="delete-btn" onclick="deleteRow(this)">❌ Delete</button></td>
       `;
       tbody.appendChild(newRow);
+    }
+
+    function deleteRow(button) {
+      const row = button.parentElement.parentElement;
+      row.parentElement.removeChild(row);
     }
   </script>
 </body>
