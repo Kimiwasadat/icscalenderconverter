@@ -31,11 +31,40 @@
       color: white;
       font-size: 12px;
     }
+    .error-box {
+      background-color: #FFEBEE;
+      border: 1px solid #E53935;
+      padding: 10px;
+      margin-bottom: 20px;
+      color: #C62828;
+      border-radius: 4px;
+    }
+    .download-link {
+      display: inline-block;
+      margin-top: 10px;
+      padding: 8px 16px;
+      background-color: #43A047;
+      color: white;
+      text-decoration: none;
+      border-radius: 4px;
+    }
   </style>
 </head>
 <body>
   <h2>✅ Review and Edit Your Academic Events</h2>
   <p>You can edit any row, add new events, or remove events. When done, click <strong>Generate ICS</strong>.</p>
+
+  {% if errors and errors|length > 0 %}
+    <div class="error-box">
+      <strong>❗ Errors detected:</strong>
+      <ul>
+        {% for error in errors %}
+          <li>{{ error }}</li>
+        {% endfor %}
+      </ul>
+      Please correct these and try again.
+    </div>
+  {% endif %}
 
   <form id="eventsForm" method="POST" action="/generate">
     <button type="button" class="add-btn" onclick="addRow()">➕ Add Event</button>
@@ -61,6 +90,9 @@
 
     <div class="controls">
       <button type="submit" class="generate-btn">✨ Generate ICS</button>
+      {% if ics_id %}
+        <a class="download-link" href="/download/{{ ics_id }}">⬇️ Download ICS File</a>
+      {% endif %}
     </div>
   </form>
 
