@@ -1,59 +1,77 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <title>Results - Academic Calendar Extractor</title>
+  <title>📅 Review and Edit Events</title>
   <style>
-    body {
-      font-family: Arial, sans-serif;
-      background-color: #f4f4f9;
+    body { font-family: Arial, sans-serif; padding: 20px; }
+    table { border-collapse: collapse; width: 100%; }
+    th, td { border: 1px solid #ccc; padding: 8px; text-align: left; }
+    th { background-color: #f4f4f4; }
+    input[type="text"] { width: 100%; border: none; background: transparent; }
+    .add-row-button {
+      background: #f9f9f9;
       text-align: center;
-      padding: 30px;
-    }
-    h1 {
+      cursor: pointer;
       color: #4CAF50;
+      font-size: 24px;
+      padding: 4px;
+      border: 1px dashed #ccc;
     }
-    table {
-      margin: 20px auto;
-      border-collapse: collapse;
-      background: #fff;
-      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    .add-row-button:hover {
+      background-color: #e8f5e9;
     }
-    th, td {
-      border: 1px solid #ddd;
-      padding: 12px 20px;
-    }
-    th {
-      background-color: #4CAF50;
-      color: white;
-    }
-    a.button {
-      display: inline-block;
-      margin-top: 20px;
-      padding: 12px 24px;
-      background-color: #4CAF50;
-      color: white;
-      text-decoration: none;
-      border-radius: 5px;
-    }
-    a.button:hover {
-      background-color: #45a049;
+    .controls { margin-top: 20px; }
+    button {
+      padding: 10px 20px;
+      font-size: 16px;
+      margin-right: 10px;
+      cursor: pointer;
     }
   </style>
 </head>
 <body>
-  <h1>📅 Extracted Events</h1>
-  <table>
-    <tr>
-      <th>Date(s)</th>
-      <th>Description</th>
-    </tr>
-    {% for date, desc in events %}
-    <tr>
-      <td>{{ date }}</td>
-      <td>{{ desc }}</td>
-    </tr>
-    {% endfor %}
-  </table>
-  <a class="button" href="/download/{{ ics_id }}">⬇️ Download ICS Calendar File</a>
+  <h2>✅ Review and Edit Your Academic Events</h2>
+  <p>You can edit any row or insert new dates as needed. When done, click <strong>Generate ICS</strong>.</p>
+
+  <form id="eventsForm" method="POST" action="/generate">
+    <table id="eventsTable">
+      <thead>
+        <tr>
+          <th>Date (MM/DD or MM/DD-MM/DD)</th>
+          <th>Description</th>
+        </tr>
+      </thead>
+      <tbody id="eventsBody">
+        {% for date, desc in events %}
+          <tr>
+            <td><input type="text" name="dates" value="{{ date }}"></td>
+            <td><input type="text" name="descriptions" value="{{ desc }}"></td>
+          </tr>
+          <tr class="add-row-button" onclick="addRow(this)">
+            <td colspan="2">➕ Add Event Here</td>
+          </tr>
+        {% endfor %}
+        <tr class="add-row-button" onclick="addRow(this)">
+          <td colspan="2">➕ Add Event Here</td>
+        </tr>
+      </tbody>
+    </table>
+
+    <div class="controls">
+      <button type="submit">✨ Generate ICS</button>
+    </div>
+  </form>
+
+  <script>
+    function addRow(buttonRow) {
+      const tbody = document.getElementById('eventsBody');
+      const newRow = document.createElement('tr');
+      newRow.innerHTML = `
+        <td><input type="text" name="dates" placeholder="MM/DD or MM/DD-MM/DD"></td>
+        <td><input type="text" name="descriptions" placeholder="Description"></td>
+      `;
+      tbody.insertBefore(newRow, buttonRow);
+    }
+  </script>
 </body>
 </html>
