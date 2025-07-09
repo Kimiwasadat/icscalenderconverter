@@ -47,10 +47,12 @@ def strip_header_weekdays(desc):
     # Remove things like "Wednesday" or "Wednesday - Thursday" at start
     weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
     parts = desc.split()
-    while parts and parts[0].lower() in weekdays:
-        parts.pop(0)
-        if parts and parts[0] in ['-', '–']:
+    while parts:
+        lowered = parts[0].lower().strip(',-–')
+        if lowered in weekdays or lowered in ['-', '–']:
             parts.pop(0)
+        else:
+            break
     return ' '.join(parts)
 
 def clean_description(raw_desc, line_lower):
@@ -100,6 +102,16 @@ def extract_events(file_stream):
                             end_str = date_parts[1].strip()
                             try:
                                 start_date = parse_date_string(start_str)
+
+                                # 👇 FIX: fill in missing month/year in end
+                                end_parts = end_str.split('/')
+                                if len(end_parts) == 1:
+                                    # Just day → use start month/year
+                                    end_str = f"{start_date.month}/{end_parts[0]}"
+                                elif len(end_parts) == 2 and len(start_str.split('/')) == 3:
+                                    # End missing year, use start year
+                                    end_str = f"{end_parts[0]}/{end_parts[1]}/{start_date.year}"
+
                                 end_date = parse_date_string(end_str)
                             except Exception:
                                 continue
@@ -112,7 +124,7 @@ def extract_events(file_stream):
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = start_date
-                            event.end = end_date + timedelta(days=1)
+                            event.end = end_date + timedelta(days=1)  # ICS end is exclusive
                             event.make_all_day()
                             calendar.events.add(event)
                     else:
