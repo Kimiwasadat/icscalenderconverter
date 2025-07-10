@@ -24,7 +24,8 @@ KEYWORDS = [
     "spring recess",
 ]
 
-date_pattern = r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b(?:\s*[-–]\s*\d{1,2}(?:/\d{2,4})?)?'
+# More robust regex to handle spaces in dates
+date_pattern = r'\d{1,2}\s*/\s*\d{1,2}(?:\s*/\s*\d{2,4})?\s*(?:[-–]\s*\d{1,2}\s*(?:/\s*\d{2,4})?)?'
 
 ics_storage = {}
 
@@ -94,6 +95,13 @@ def clean_description(raw_desc, line_lower):
     desc = strip_header_weekdays(raw_desc)
     return desc.strip(' ;:-–').strip()
 
+def add_single_day_event(calendar, date, description):
+    event = Event()
+    event.name = description or "Academic Event"
+    event.begin = date
+    event.make_all_day()
+    calendar.events.add(event)
+
 def extract_events(file_stream):
     calendar = Calendar()
     events_list = []
@@ -135,26 +143,14 @@ def extract_events(file_stream):
 
                             current_date = start_date
                             while current_date <= end_date:
-                                event = Event()
-                                event.name = description or "Academic Event"
-                                event.begin = current_date
-                                event.end = current_date + timedelta(days=1)
-                                event.make_all_day()
-                                calendar.events.add(event)
-
+                                add_single_day_event(calendar, current_date, description)
                                 date_string = current_date.strftime("%m/%d/%Y")
                                 events_list.append((date_string, description))
                                 current_date += timedelta(days=1)
 
                         else:
                             single_date = parse_date_string(match, header_year)
-                            event = Event()
-                            event.name = description or "Academic Event"
-                            event.begin = single_date
-                            event.end = single_date + timedelta(days=1)
-                            event.make_all_day()
-                            calendar.events.add(event)
-
+                            add_single_day_event(calendar, single_date, description)
                             date_string = single_date.strftime("%m/%d/%Y")
                             events_list.append((date_string, description))
                     except Exception as e:
@@ -197,7 +193,6 @@ def generate():
             continue
 
         date = date.strip()
-        desc = desc.strip()
         desc = strip_header_weekdays(desc).strip(' ;:-–').strip()
 
         try:
@@ -214,26 +209,14 @@ def generate():
 
                 current_date = start_date
                 while current_date <= end_date:
-                    event = Event()
-                    event.name = desc
-                    event.begin = current_date
-                    event.end = current_date + timedelta(days=1)
-                    event.make_all_day()
-                    calendar.events.add(event)
-
+                    add_single_day_event(calendar, current_date, desc)
                     date_string = current_date.strftime("%m/%d/%Y")
                     events_list.append((date_string, desc))
                     current_date += timedelta(days=1)
 
             else:
                 single_date = parse_date_string(date, header_year)
-                event = Event()
-                event.name = desc
-                event.begin = single_date
-                event.end = single_date + timedelta(days=1)
-                event.make_all_day()
-                calendar.events.add(event)
-
+                add_single_day_event(calendar, single_date, desc)
                 date_string = single_date.strftime("%m/%d/%Y")
                 events_list.append((date_string, desc))
         except Exception as e:
