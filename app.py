@@ -133,10 +133,6 @@ def extract_events(file_stream):
                                 header_year
                             )
 
-                            if end_date < start_date:
-                                raise ValueError("End date before start date.")
-
-                            # Add one event PER DAY in the range
                             current_date = start_date
                             while current_date <= end_date:
                                 event = Event()
@@ -202,10 +198,9 @@ def generate():
 
         date = date.strip()
         desc = desc.strip()
+        desc = strip_header_weekdays(desc).strip(' ;:-–').strip()
 
         try:
-            desc = strip_header_weekdays(desc).strip(' ;:-–').strip()
-
             if '-' in date or '–' in date:
                 date_parts = re.split(r'[-–]', date)
                 if len(date_parts) != 2:
@@ -216,9 +211,6 @@ def generate():
                     date_parts[1].strip(),
                     header_year
                 )
-
-                if end_date < start_date:
-                    raise ValueError("End date before start date.")
 
                 current_date = start_date
                 while current_date <= end_date:
