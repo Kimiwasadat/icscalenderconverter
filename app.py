@@ -77,18 +77,28 @@ def parse_range_dates(start_str, end_str, header_year):
     return start_date, end_date
 
 def strip_header_weekdays(desc):
-    weekdays = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', '-', '–'}
+    """
+    Removes leading weekday names like 'Tuesday -' from the start of the description.
+    Preserves the rest exactly.
+    """
+    weekdays = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday'}
     parts = desc.strip().split()
     result = []
+    skipping = True
     for part in parts:
-        cleaned = part.lower().strip(',-–')
-        if cleaned in weekdays:
+        lowered = part.lower().strip(',-–')
+        if skipping and (lowered in weekdays or lowered in ['-', '–']):
             continue
-        result.append(part)
+        else:
+            skipping = False
+            result.append(part)
     return ' '.join(result)
 
 def clean_description(raw_desc, line_lower):
-    # Preserve all meaningful phrases exactly as PDF states, minus leading weekday headers
+    """
+    Don't overwrite any keywords. Just clean leading weekday headers.
+    Always preserve the real phrase exactly as in the PDF after stripping header weekday.
+    """
     return strip_header_weekdays(raw_desc).strip(' ;:-–').strip()
 
 def add_single_day_event(calendar, date, description):
