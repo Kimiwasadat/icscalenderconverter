@@ -62,21 +62,17 @@ def parse_range_dates(start_str, end_str, header_year):
     end_parts = end_str.strip().split('/')
 
     if len(end_parts) == 1:
-        # Only day given, inherit month/year
         day = int(end_parts[0])
         end_date = datetime(start_date.year, start_date.month, day)
     elif len(end_parts) == 2:
-        # MM/DD, use header year
         end_date = parse_date_string(end_str, header_year)
     elif len(end_parts) == 3:
-        # MM/DD/YYYY
         end_date = parse_date_string(end_str)
     else:
         raise ValueError("Invalid end date format.")
 
     if end_date < start_date:
         raise ValueError(f"End date {end_date} is before start date {start_date}.")
-
     return start_date, end_date
 
 def strip_header_weekdays(desc):
@@ -143,15 +139,20 @@ def extract_events(file_stream):
                             if end_date < start_date:
                                 raise ValueError("End date before start date.")
 
-                            event = Event()
-                            event.name = description or "Academic Event"
-                            event.begin = start_date
-                            event.end = end_date + timedelta(days=1)  # ICS exclusive
-                            event.make_all_day()
-                            calendar.events.add(event)
+                            # Add one event PER DAY in the range
+                            current_date = start_date
+                            while current_date <= end_date:
+                                event = Event()
+                                event.name = description or "Academic Event"
+                                event.begin = current_date
+                                event.end = current_date + timedelta(days=1)
+                                event.make_all_day()
+                                calendar.events.add(event)
 
-                            date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
-                            events_list.append((date_string, description))
+                                date_string = current_date.strftime("%m/%d/%Y")
+                                events_list.append((date_string, description))
+                                current_date += timedelta(days=1)
+
                         else:
                             single_date = parse_date_string(match, header_year)
                             event = Event()
@@ -220,15 +221,19 @@ def generate():
                 if end_date < start_date:
                     raise ValueError("End date before start date.")
 
-                event = Event()
-                event.name = desc
-                event.begin = start_date
-                event.end = end_date + timedelta(days=1)
-                event.make_all_day()
-                calendar.events.add(event)
+                current_date = start_date
+                while current_date <= end_date:
+                    event = Event()
+                    event.name = desc
+                    event.begin = current_date
+                    event.end = current_date + timedelta(days=1)
+                    event.make_all_day()
+                    calendar.events.add(event)
 
-                date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
-                events_list.append((date_string, desc))
+                    date_string = current_date.strftime("%m/%d/%Y")
+                    events_list.append((date_string, desc))
+                    current_date += timedelta(days=1)
+
             else:
                 single_date = parse_date_string(date, header_year)
                 event = Event()
