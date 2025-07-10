@@ -24,7 +24,7 @@ KEYWORDS = [
     "spring recess",
 ]
 
-# More robust regex to handle spaces in dates
+# Improved regex to handle spaces in dates
 date_pattern = r'\d{1,2}\s*/\s*\d{1,2}(?:\s*/\s*\d{2,4})?\s*(?:[-–]\s*\d{1,2}\s*(?:/\s*\d{2,4})?)?'
 
 ics_storage = {}
@@ -88,12 +88,8 @@ def strip_header_weekdays(desc):
     return ' '.join(result)
 
 def clean_description(raw_desc, line_lower):
-    if "college closed" in line_lower:
-        return "College Closed"
-    if "no classes scheduled" in line_lower:
-        return "No classes scheduled"
-    desc = strip_header_weekdays(raw_desc)
-    return desc.strip(' ;:-–').strip()
+    # Preserve all meaningful phrases exactly as PDF states, minus leading weekday headers
+    return strip_header_weekdays(raw_desc).strip(' ;:-–').strip()
 
 def add_single_day_event(calendar, date, description):
     event = Event()
@@ -193,7 +189,7 @@ def generate():
             continue
 
         date = date.strip()
-        desc = strip_header_weekdays(desc).strip(' ;:-–').strip()
+        desc = clean_description(desc, desc.lower())
 
         try:
             if '-' in date or '–' in date:
