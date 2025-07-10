@@ -24,7 +24,7 @@ KEYWORDS = [
     "spring recess",
 ]
 
-date_pattern = r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b(?:\s*[-–]\s*\d{1,2}/\d{1,2}(?:/\d{2,4})?)?'
+date_pattern = r'\b\d{1,2}/\d{1,2}(?:/\d{2,4})?\b(?:\s*[-–]\s*\d{1,2}(?:/\d{2,4})?)?'
 
 ics_storage = {}
 
@@ -56,6 +56,25 @@ def parse_date_string(date_str, header_year=None):
         return datetime(header_year, month, day)
     else:
         raise ValueError(f"Invalid date format: {date_str}")
+
+def parse_range_dates(start_str, end_str, header_year):
+    start_date = parse_date_string(start_str, header_year)
+    end_parts = end_str.strip().split('/')
+
+    if len(end_parts) == 1:
+        # Only day given, inherit month/year
+        day = int(end_parts[0])
+        end_date = datetime(start_date.year, start_date.month, day)
+    elif len(end_parts) == 2:
+        # MM/DD, use header year
+        end_date = parse_date_string(end_str, header_year)
+    elif len(end_parts) == 3:
+        # MM/DD/YYYY
+        end_date = parse_date_string(end_str)
+    else:
+        raise ValueError("Invalid end date format.")
+
+    return start_date, end_date
 
 def strip_header_weekdays(desc):
     weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
@@ -112,16 +131,16 @@ def extract_events(file_stream):
                             if len(date_parts) != 2:
                                 raise ValueError("Invalid range format.")
 
-                            start_date = parse_date_string(date_parts[0].strip(), header_year)
-                            end_date = parse_date_string(date_parts[1].strip(), header_year)
+                            start_date, end_date = parse_range_dates(date_parts[0].strip(), date_parts[1].strip(), header_year)
 
                             if end_date < start_date:
                                 raise ValueError("End date before start date.")
 
+                            # Add event
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = start_date
-                            event.end = end_date + timedelta(days=1)  # Exclusive end
+                            event.end = end_date + timedelta(days=1)  # ICS exclusive
                             event.make_all_day()
                             calendar.events.add(event)
 
@@ -185,8 +204,7 @@ def generate():
                 if len(date_parts) != 2:
                     raise ValueError("Invalid range format.")
 
-                start_date = parse_date_string(date_parts[0].strip(), header_year)
-                end_date = parse_date_string(date_parts[1].strip(), header_year)
+                start_date, end_date = parse_range_dates(date_parts[0].strip(), date_parts[1].strip(), header_year)
 
                 if end_date < start_date:
                     raise ValueError("End date before start date.")
@@ -194,7 +212,7 @@ def generate():
                 event = Event()
                 event.name = desc
                 event.begin = start_date
-                event.end = end_date + timedelta(days=1)  # Exclusive ICS standard
+                event.end = end_date + timedelta(days=1)  # ICS exclusive
                 event.make_all_day()
                 calendar.events.add(event)
 
