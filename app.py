@@ -106,40 +106,40 @@ def extract_events(file_stream):
                     raw_desc = line.replace(match, "").strip()
                     description = clean_description(raw_desc, line_lower)
 
-                    if '-' in match or '–' in match:
-                        date_parts = re.split(r'[-–]', match)
-                        if len(date_parts) == 2:
-                            try:
-                                start_date = parse_date_string(date_parts[0].strip(), header_year)
-                                end_date = parse_date_string(date_parts[1].strip(), header_year)
-                            except Exception as e:
-                                print(f"⚠️ Skipping range '{match}': {e}")
-                                continue
+                    try:
+                        if '-' in match or '–' in match:
+                            date_parts = re.split(r'[-–]', match)
+                            if len(date_parts) != 2:
+                                raise ValueError("Invalid range format.")
 
-                            date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
-                            events_list.append((date_string, description))
+                            start_date = parse_date_string(date_parts[0].strip(), header_year)
+                            end_date = parse_date_string(date_parts[1].strip(), header_year)
+
+                            if end_date < start_date:
+                                raise ValueError("End date before start date.")
 
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = start_date
-                            event.end = end_date + timedelta(days=1)
+                            event.end = end_date + timedelta(days=1)  # Exclusive end
                             event.make_all_day()
                             calendar.events.add(event)
-                    else:
-                        try:
-                            event_date = parse_date_string(match, header_year)
-                        except Exception as e:
-                            print(f"⚠️ Skipping date '{match}': {e}")
-                            continue
 
-                        date_string = event_date.strftime("%m/%d/%Y")
-                        events_list.append((date_string, description))
+                            date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
+                            events_list.append((date_string, description))
+                        else:
+                            single_date = parse_date_string(match, header_year)
+                            event = Event()
+                            event.name = description or "Academic Event"
+                            event.begin = single_date
+                            event.make_all_day()
+                            calendar.events.add(event)
 
-                        event = Event()
-                        event.name = description or "Academic Event"
-                        event.begin = event_date
-                        event.make_all_day()
-                        calendar.events.add(event)
+                            date_string = single_date.strftime("%m/%d/%Y")
+                            events_list.append((date_string, description))
+                    except Exception as e:
+                        print(f"⚠️ Skipping line '{line}': {e}")
+                        continue
 
     return events_list, str(calendar)
 
@@ -179,39 +179,39 @@ def generate():
         date = date.strip()
         desc = desc.strip()
 
-        if '-' in date or '–' in date:
-            date_parts = re.split(r'[-–]', date)
-            if len(date_parts) == 2:
-                try:
-                    start_date = parse_date_string(date_parts[0].strip(), header_year)
-                    end_date = parse_date_string(date_parts[1].strip(), header_year)
+        try:
+            if '-' in date or '–' in date:
+                date_parts = re.split(r'[-–]', date)
+                if len(date_parts) != 2:
+                    raise ValueError("Invalid range format.")
 
-                    event = Event()
-                    event.name = desc
-                    event.begin = start_date
-                    event.end = end_date + timedelta(days=1)  # Exclusive end
-                    event.make_all_day()
-                    calendar.events.add(event)
+                start_date = parse_date_string(date_parts[0].strip(), header_year)
+                end_date = parse_date_string(date_parts[1].strip(), header_year)
 
-                    date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
-                    events_list.append((date_string, desc))
-                except Exception as e:
-                    errors.append(f"Row {i}: Invalid date range. {str(e)}")
-            else:
-                errors.append(f"Row {i}: Invalid date range format.")
-        else:
-            try:
-                event_date = parse_date_string(date, header_year)
+                if end_date < start_date:
+                    raise ValueError("End date before start date.")
+
                 event = Event()
                 event.name = desc
-                event.begin = event_date
+                event.begin = start_date
+                event.end = end_date + timedelta(days=1)  # Exclusive ICS standard
                 event.make_all_day()
                 calendar.events.add(event)
 
-                date_string = event_date.strftime("%m/%d/%Y")
+                date_string = f"{start_date.strftime('%m/%d/%Y')}-{end_date.strftime('%m/%d/%Y')}"
                 events_list.append((date_string, desc))
-            except Exception as e:
-                errors.append(f"Row {i}: Invalid date. {str(e)}")
+            else:
+                single_date = parse_date_string(date, header_year)
+                event = Event()
+                event.name = desc
+                event.begin = single_date
+                event.make_all_day()
+                calendar.events.add(event)
+
+                date_string = single_date.strftime("%m/%d/%Y")
+                events_list.append((date_string, desc))
+        except Exception as e:
+            errors.append(f"Row {i}: {str(e)}")
 
     session_id = os.urandom(8).hex()
     ics_storage[session_id] = str(calendar)
