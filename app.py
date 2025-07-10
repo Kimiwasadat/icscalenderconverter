@@ -74,6 +74,9 @@ def parse_range_dates(start_str, end_str, header_year):
     else:
         raise ValueError("Invalid end date format.")
 
+    if end_date < start_date:
+        raise ValueError(f"End date {end_date} is before start date {start_date}.")
+
     return start_date, end_date
 
 def strip_header_weekdays(desc):
@@ -131,12 +134,15 @@ def extract_events(file_stream):
                             if len(date_parts) != 2:
                                 raise ValueError("Invalid range format.")
 
-                            start_date, end_date = parse_range_dates(date_parts[0].strip(), date_parts[1].strip(), header_year)
+                            start_date, end_date = parse_range_dates(
+                                date_parts[0].strip(),
+                                date_parts[1].strip(),
+                                header_year
+                            )
 
                             if end_date < start_date:
                                 raise ValueError("End date before start date.")
 
-                            # Add event
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = start_date
@@ -151,6 +157,7 @@ def extract_events(file_stream):
                             event = Event()
                             event.name = description or "Academic Event"
                             event.begin = single_date
+                            event.end = single_date + timedelta(days=1)
                             event.make_all_day()
                             calendar.events.add(event)
 
@@ -204,7 +211,11 @@ def generate():
                 if len(date_parts) != 2:
                     raise ValueError("Invalid range format.")
 
-                start_date, end_date = parse_range_dates(date_parts[0].strip(), date_parts[1].strip(), header_year)
+                start_date, end_date = parse_range_dates(
+                    date_parts[0].strip(),
+                    date_parts[1].strip(),
+                    header_year
+                )
 
                 if end_date < start_date:
                     raise ValueError("End date before start date.")
@@ -212,7 +223,7 @@ def generate():
                 event = Event()
                 event.name = desc
                 event.begin = start_date
-                event.end = end_date + timedelta(days=1)  # ICS exclusive
+                event.end = end_date + timedelta(days=1)
                 event.make_all_day()
                 calendar.events.add(event)
 
@@ -223,6 +234,7 @@ def generate():
                 event = Event()
                 event.name = desc
                 event.begin = single_date
+                event.end = single_date + timedelta(days=1)
                 event.make_all_day()
                 calendar.events.add(event)
 
