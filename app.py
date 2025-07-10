@@ -76,17 +76,14 @@ def parse_range_dates(start_str, end_str, header_year):
     return start_date, end_date
 
 def strip_header_weekdays(desc):
-    weekdays = ['monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday']
-    parts = desc.split()
+    weekdays = {'monday', 'tuesday', 'wednesday', 'thursday', 'friday', 'saturday', 'sunday', '-', '–'}
+    parts = desc.strip().split()
     result = []
-    skipping = True
     for part in parts:
-        lowered = part.lower().strip(',-–')
-        if skipping and (lowered in weekdays or lowered in ['-', '–']):
+        cleaned = part.lower().strip(',-–')
+        if cleaned in weekdays:
             continue
-        else:
-            skipping = False
-            result.append(part)
+        result.append(part)
     return ' '.join(result)
 
 def clean_description(raw_desc, line_lower):
@@ -207,6 +204,8 @@ def generate():
         desc = desc.strip()
 
         try:
+            desc = strip_header_weekdays(desc).strip(' ;:-–').strip()
+
             if '-' in date or '–' in date:
                 date_parts = re.split(r'[-–]', date)
                 if len(date_parts) != 2:
